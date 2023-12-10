@@ -17,18 +17,22 @@ file1 = open("settings.ini", "r")
 line = file1.readline()
 model_file = file1.readline()
 language_file = file1.readline()
+input_device_file = file1.readline()
 confidence_file = file1.readline()
 processing_interval_file = file1.readline()
 timeout_file = file1.readline()
+sample_rate_file = file1.readline()
+num_channels_file = file1.readline()
+channel_index_file = file1.readline()
+chunk_seconds_file = file1.readline()
+latency_file = file1.readline()
 
-# Путь к файлу настроек
-flags.DEFINE_string('settings_file', 'settings.ini', 'Путь к файлу настроек.')
 
 flags.DEFINE_string('model_name', model_file.strip(),
                     'The version of the OpenAI Whisper model to use.')
 flags.DEFINE_string('language', language_file.strip(),
                     'The language to use or empty to auto-detect.')
-flags.DEFINE_string('input_device', 'default', 'The input device used to record audio.')
+flags.DEFINE_string('input_device', input_device_file.strip(), 'The input device used to record audio.')
 
 confidence_value = confidence_file.split('=')[-1].strip()
 flags.DEFINE_float('confidence', float(confidence_value), 'Минимальная уверенность для использования.')
@@ -37,15 +41,15 @@ flags.DEFINE_integer('processing_interval', processing_interval_file.strip(), '�
 
 flags.DEFINE_integer('timeout', timeout_file.strip(), 'Таймаут работы приложения в секундах.')
 
-flags.DEFINE_integer('sample_rate', 16000,
+flags.DEFINE_integer('sample_rate', sample_rate_file.strip(),
                      'The sample rate of the recorded audio.')
-flags.DEFINE_integer('num_channels', 1,
+flags.DEFINE_integer('num_channels', num_channels_file.strip(),
                      'The number of channels of the recorded audio.')
-flags.DEFINE_integer('channel_index', 0,
+flags.DEFINE_integer('channel_index', channel_index_file.strip(),
                      'The index of the channel to use for transcription.')
-flags.DEFINE_integer('chunk_seconds', 10,
+flags.DEFINE_integer('chunk_seconds', chunk_seconds_file.strip(),
                      'The length in seconds of each recorded chunk of audio.')
-flags.DEFINE_string('latency', 'low', 'The latency of the recording stream.')
+flags.DEFINE_string('latency', latency_file.strip(), 'The latency of the recording stream.')
 
 
 # A decorator to log the timing of performance-critical functions.
@@ -90,27 +94,8 @@ def process_audio(audio_queue, model):
 
 
 def main(argv):
-    # Загрузка настроек из файла конфигурации
-    logging.info(f'Loading settings from {FLAGS.settings_file}...')
 
-    # Используем библиотеку configparser для загрузки настроек из файла
-    config = configparser.ConfigParser()
-   
-
-    # Устанавливаем значения флагов из конфигурационного файла
-    for section in config.sections():
-        for option in config.options(section):
-            if hasattr(FLAGS, option):
-                flag_value = getattr(FLAGS, option)
-                # Установка значений, преобразуя типы данных при необходимости
-                if isinstance(flag_value, int):
-                    setattr(FLAGS, option, config.getint(section, option))
-                elif isinstance(flag_value, float):
-                    setattr(FLAGS, option, config.getfloat(section, option))
-                else:
-                    setattr(FLAGS, option, config.get(section, option))
-
-    # Загрузка модели Whisper
+ # Загрузка модели Whisper
     logging.info(f'Loading model "{FLAGS.model_name}"...')
     model = whisper.load_model(name=FLAGS.model_name)
 
