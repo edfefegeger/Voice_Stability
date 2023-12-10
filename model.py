@@ -68,7 +68,6 @@ recording_start_time = 0
 user_speaking = False
 queue_audio = queue.Queue()  # Добавим глобальную очередь для передачи в record_audio
 
-
 # Функция для записи аудио
 def record_audio(callback, block_size, queue_audio, **kwargs):
     global recording_chunk, recording_start_time, user_speaking
@@ -77,6 +76,8 @@ def record_audio(callback, block_size, queue_audio, **kwargs):
         recording_chunk = np.zeros(block_size, dtype=np.float32)
         recording_start_time = now()
         user_speaking = False
+
+        print("Поток записи аудио запущен.")
 
         while True:
             sd.sleep(10)
@@ -95,6 +96,7 @@ def record_audio(callback, block_size, queue_audio, **kwargs):
                     user_speaking = True
                     print("Голос был обнаружен.")
 
+        print("Поток записи аудио завершен.")
 
 # Основная функция
 def main(argv):
@@ -144,6 +146,8 @@ def main(argv):
     # Ожидание завершения обоих потоков
     recording_thread.join()
     audio_processing_thread.join()
+
+    print("Программа завершена.")
 
 # Функция обратного вызова для потока записи
 def stream_callback(indata, frames, time, status, audio_queue):
