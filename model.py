@@ -35,7 +35,7 @@ flags.DEFINE_string('language', language_file.strip(),
 flags.DEFINE_string('input_device', input_device_file.strip(), 'The input device used to record audio.')
 
 confidence_value = confidence_file.split('=')[-1].strip()
-flags.DEFINE_float('confidence', float(confidence_value), 'Минимальная уверенность для использования.')
+flags.DEFINE_float('confidence', confidence_file.strip(), 'Минимальная уверенность для использования.')
 
 flags.DEFINE_integer('processing_interval', processing_interval_file.strip(), 'Интервал обработки аудио в секундах.')
 
