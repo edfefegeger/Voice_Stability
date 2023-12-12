@@ -78,8 +78,11 @@ def check_microphone_level(audio_queue):
             chunk_duration += 0.32
             if chunk_duration >= max_chunk_duration:
                 is_recording = False
-                audio_queue.put(indata[:, FLAGS.channel_index].copy())  # Добавление записанного chunk в очередь
-                logging.info("Конец записи")
+                # Добавление записанного chunk в очередь, предварительно проверив на None
+                if audio_queue is not None:
+                    
+                    logging.info("Конец записи")
+
 
 
 
@@ -122,16 +125,20 @@ def stream_callback(indata, frames, time, status, audio_queue):
 
 
 
-
 def process_audio(audio_queue, model):
     # Block until the next chunk of audio is available on the queue.
     audio_and_volume = audio_queue.get()
 
-    # Unpack the values from the tuple.
-    audio, volume_level = audio_and_volume
+    # Check if audio_and_volume is not empty
+    if audio_and_volume is not None:
+        # Unpack the values from the tuple.
+        audio, volume_level = audio_and_volume
 
-    # Transcribe the latest audio chunk.
-    transcribe(model=model, audio=audio, volume_level=volume_level)
+        # Check if audio is not empty
+        if np.any(audio):
+            # Transcribe the latest audio chunk.
+            transcribe(model=model, audio=audio, volume_level=volume_level)
+
 
 
 def main(argv):
@@ -150,7 +157,7 @@ def main(argv):
     logging.info('Starting stream...')
     audio_queue = queue.Queue()
     callback = partial(stream_callback, audio_queue=audio_queue)
-
+    is_recording = False  # Добавьте эту переменную в ваш main
     with sd.InputStream(samplerate=FLAGS.sample_rate,
                         blocksize=block_size,
                         device=FLAGS.input_device,
