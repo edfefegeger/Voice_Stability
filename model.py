@@ -1,3 +1,4 @@
+import threading
 from absl import app
 from absl import flags
 from absl import logging
@@ -9,7 +10,7 @@ import sounddevice as sd
 from time import time as now
 import whisper
 import configparser
-
+import sounddevice as sd
 FLAGS = flags.FLAGS
 
 # Определение настроек
@@ -50,6 +51,22 @@ flags.DEFINE_integer('channel_index', channel_index_file.strip(),
 flags.DEFINE_integer('chunk_seconds', chunk_seconds_file.strip(),
                      'The length in seconds of each recorded chunk of audio.')
 flags.DEFINE_string('latency', latency_file.strip(), 'The latency of the recording stream.')
+
+THRESHOLD_LEVEL = 0.2  # Примерный порог, подстройте под свои нужды
+
+def check_microphone_level():
+    while True:
+        # Запись небольшого блока аудио для анализа уровня громкости
+        block_size = FLAGS.chunk_seconds * FLAGS.sample_rate
+        indata = sd.rec(frames=block_size, channels=FLAGS.num_channels, dtype=np.float32)
+        sd.wait()
+
+        # Вычисление уровня громкости (просто пример, может потребоваться другой способ)
+        volume_level = np.max(np.abs(indata))
+
+        # Вывод сообщения в консоль
+        print(f"Громкость в микрофоне: {volume_level}")
+
 
 
 # A decorator to log the timing of performance-critical functions.
@@ -116,6 +133,9 @@ def main(argv):
                         dtype=np.float32,
                         latency=FLAGS.latency,
                         callback=callback):
+        
+        check_microphone_thread = threading.Thread(target=check_microphone_level, daemon=True)
+        check_microphone_thread.start()    
         while True:
             # Обработка блоков аудио из очереди
             process_audio(audio_queue, model)
