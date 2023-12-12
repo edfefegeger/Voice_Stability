@@ -7,7 +7,7 @@ from functools import wraps
 import numpy as np
 import queue
 import sounddevice as sd
-from time import time as now
+from time import sleep, time as now
 import whisper
 import configparser
 import sounddevice as sd
@@ -27,7 +27,7 @@ num_channels_file = file1.readline()
 channel_index_file = file1.readline()
 chunk_seconds_file = file1.readline()
 latency_file = file1.readline()
-
+Volume = file1.readline()
 
 flags.DEFINE_string('model_name', model_file.strip(),
                     'The version of the OpenAI Whisper model to use.')
@@ -52,20 +52,22 @@ flags.DEFINE_integer('chunk_seconds', chunk_seconds_file.strip(),
                      'The length in seconds of each recorded chunk of audio.')
 flags.DEFINE_string('latency', latency_file.strip(), 'The latency of the recording stream.')
 
-THRESHOLD_LEVEL = 0.2  # Примерный порог, подстройте под свои нужды
+flags.DEFINE_float('Volume', Volume.strip(), 'The latency of the recording stream.')
+
+#THRESHOLD_LEVEL = 0.071  # Примерный порог, подстройте под свои нужды
 
 def check_microphone_level():
     while True:
         # Запись небольшого блока аудио для анализа уровня громкости
         block_size = FLAGS.chunk_seconds * FLAGS.sample_rate
         indata = sd.rec(frames=block_size, channels=FLAGS.num_channels, dtype=np.float32)
-        sd.wait()
+        sleep(0.32)
 
         # Вычисление уровня громкости (просто пример, может потребоваться другой способ)
         volume_level = np.max(np.abs(indata))
-
-        # Вывод сообщения в консоль
-        print(f"Громкость в микрофоне: {volume_level}")
+        if volume_level > FLAGS.Volume:
+            
+            print(f"Пользоватлеь говорит, Громкость в микрофоне: {volume_level}")
 
 
 
