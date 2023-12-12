@@ -9,7 +9,6 @@ import queue
 import sounddevice as sd
 from time import sleep, time as now
 import whisper
-import configparser
 import sounddevice as sd
 FLAGS = flags.FLAGS
 
@@ -56,7 +55,11 @@ flags.DEFINE_float('Volume', Volume.strip(), 'The latency of the recording strea
 
 #THRESHOLD_LEVEL = 0.071  # Примерный порог, подстройте под свои нужды
 
-def check_microphone_level():
+def check_microphone_level(audio_queue):
+    is_recording = False
+    chunk_duration = 0
+    max_chunk_duration = 10.0  # Максимальная длительность записи в секундах
+
     while True:
         # Запись небольшого блока аудио для анализа уровня громкости
         block_size = FLAGS.chunk_seconds * FLAGS.sample_rate
@@ -66,8 +69,18 @@ def check_microphone_level():
         # Вычисление уровня громкости (просто пример, может потребоваться другой способ)
         volume_level = np.max(np.abs(indata))
         if volume_level > FLAGS.Volume:
-            
-            print(f"Пользоватлеь говорит, Громкость в микрофоне: {volume_level}")
+            print(f"Пользователь говорит, Громкость в микрофоне: {volume_level}")
+            if not is_recording:
+                is_recording = True
+                chunk_duration = 0
+                logging.info("Начало записи")
+        elif is_recording:
+            chunk_duration += 0.32
+            if chunk_duration >= max_chunk_duration:
+                is_recording = False
+                audio_queue.put(indata[:, FLAGS.channel_index].copy())  # Добавление записанного chunk в очередь
+                logging.info("Конец записи")
+
 
 
 
@@ -84,7 +97,7 @@ def timed(func):
 
 
 @timed
-def transcribe(model, audio):
+def transcribe(model, audio, volume_level):
     # Run the Whisper model to transcribe the audio chunk.
     result = whisper.transcribe(model=model, audio=audio)
 
@@ -98,18 +111,27 @@ def stream_callback(indata, frames, time, status, audio_queue):
     if status:
         logging.warning(f'Stream callback status: {status}')
 
+    # Check if indata is not empty
+    if not np.any(indata):
+        return
+
     # Add this chunk of audio to the queue.
+    volume_level = np.max(np.abs(indata))
     audio = indata[:, FLAGS.channel_index].copy()
-    audio_queue.put(audio)
+    audio_queue.put((audio, volume_level))  # передача volume_level вместе с аудио
 
 
-@timed
+
+
 def process_audio(audio_queue, model):
     # Block until the next chunk of audio is available on the queue.
-    audio = audio_queue.get()
+    audio_and_volume = audio_queue.get()
+
+    # Unpack the values from the tuple.
+    audio, volume_level = audio_and_volume
 
     # Transcribe the latest audio chunk.
-    transcribe(model=model, audio=audio)
+    transcribe(model=model, audio=audio, volume_level=volume_level)
 
 
 def main(argv):
@@ -128,6 +150,7 @@ def main(argv):
     logging.info('Starting stream...')
     audio_queue = queue.Queue()
     callback = partial(stream_callback, audio_queue=audio_queue)
+
     with sd.InputStream(samplerate=FLAGS.sample_rate,
                         blocksize=block_size,
                         device=FLAGS.input_device,
@@ -136,8 +159,9 @@ def main(argv):
                         latency=FLAGS.latency,
                         callback=callback):
         
-        check_microphone_thread = threading.Thread(target=check_microphone_level, daemon=True)
-        check_microphone_thread.start()    
+        check_microphone_thread = threading.Thread(target=check_microphone_level, args=(audio_queue,), daemon=True)
+
+        check_microphone_thread.start()   
         while True:
             # Обработка блоков аудио из очереди
             process_audio(audio_queue, model)
