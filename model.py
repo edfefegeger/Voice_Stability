@@ -72,7 +72,7 @@ def check_microphone_level(audio_queue, is_recording_var):
         # Вычисление уровня громкости (просто пример, может потребоваться другой способ)
         volume_level = np.max(np.abs(indata))
         if volume_level > FLAGS.Volume:
-            print(f"Пользователь говорит, Громкость в микрофоне: {volume_level}")
+            
             with is_recording_lock:
                 if not is_recording_var.value:
                     is_recording_var.value = True
