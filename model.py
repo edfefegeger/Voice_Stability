@@ -28,7 +28,7 @@ channel_index_file = file1.readline()
 chunk_seconds_file = file1.readline()
 latency_file = file1.readline()
 Volume = file1.readline()
-
+Time = file1.readline()
 flags.DEFINE_string('model_name', model_file.strip(),
                     'The version of the OpenAI Whisper model to use.')
 flags.DEFINE_string('language', language_file.strip(),
@@ -52,7 +52,9 @@ flags.DEFINE_integer('chunk_seconds', chunk_seconds_file.strip(),
                      'The length in seconds of each recorded chunk of audio.')
 flags.DEFINE_string('latency', latency_file.strip(), 'The latency of the recording stream.')
 
-flags.DEFINE_float('Volume', Volume.strip(), 'The latency of the recording stream.')
+flags.DEFINE_float('Volume', Volume.strip(), 'Минимальный порог громкости для использования.')
+
+flags.DEFINE_float('Time', Time.strip(), 'Время на один фрагмент записи в секунлдах.')
 
 # THRESHOLD_LEVEL = 0.071  # Примерный порог, подстройте под свои нужды
 is_recording_var = Value('b', False)
@@ -61,7 +63,7 @@ is_recording_lock = threading.Lock()
 
 def check_microphone_level(audio_queue, is_recording_var):
     chunk_duration = 0
-    max_chunk_duration = 10.0  # Максимальная длительность записи в секундах
+    max_chunk_duration = FLAGS.Time # Максимальная длительность записи в секундах
 
     while True:
         # Запись небольшого блока аудио для анализа уровня громкости
