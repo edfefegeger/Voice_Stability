@@ -91,7 +91,7 @@ def check_microphone_level(audio_queue, is_recording_var):
                     logging.info("Конец записи")
 
 
-# A decorator to log the timing of performance-critical functions.
+#Задержка декоратора RecorA для регистрации времени выполнения критически важных функций.ding stream
 def timed(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
