@@ -91,26 +91,27 @@ def check_microphone_level(audio_queue, is_recording_var):
                     logging.info("Конец записи")
 
 
-#Задержка декоратора RecorA для регистрации времени выполнения критически важных функций.ding stream
 def timed(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         start = now()
         result = func(*args, **kwargs)
         stop = now()
-        logging.debug(f'{func.__name__} took {stop-start:.3f}s')
+        logging.debug(f'{func.__name__} took {stop - start:.3f}s')
         return result
+
     return wrapper
 
 
 @timed
 def transcribe(model, audio, volume_level):
     # Run the Whisper model to transcribe the audio chunk.
-    result = whisper.transcribe(model=model, audio=audio)
+    result = whisper.transcribe(model=model, audio=audio, language=FLAGS.language)
 
     # Use the transcribed text.
     text = result['text'].strip()
     logging.info(text)
+
 
 
 @timed
@@ -144,6 +145,7 @@ def process_audio(audio_queue, model, is_recording_var):
 
         if not is_recording_var.value:
             exit
+
 
 def main(argv):
     # Загрузка модели Whisper
