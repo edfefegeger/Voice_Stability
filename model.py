@@ -61,7 +61,7 @@ is_recording_lock = threading.Lock()
 
 def check_microphone_level(audio_queue, is_recording_var):
     chunk_duration = 0
-    max_chunk_duration = FLAGS.Time # Максимальная длительность записи в секундах
+    max_chunk_duration = FLAGS.Time  # Максимальная длительность записи в секундах
 
     while True:
         # Запись небольшого блока аудио для анализа уровня громкости
@@ -69,7 +69,7 @@ def check_microphone_level(audio_queue, is_recording_var):
         indata = sd.rec(frames=block_size, channels=FLAGS.num_channels, dtype=np.float32)
         sleep(0.32)
 
-        # Вычисление уровня громкости (просто пример, может потребоваться другой способ)
+        # Вычисление уровня громкости
         volume_level = np.max(np.abs(indata))
         if volume_level > FLAGS.Volume:
             
@@ -87,6 +87,7 @@ def check_microphone_level(audio_queue, is_recording_var):
                     if audio_queue is not None and is_recording_var.value:
                         audio_queue.put((indata[:, FLAGS.channel_index].copy(), volume_level))  # передача volume_level вместе с аудио
                     logging.info("Конец записи")
+
 
 
 def timed(func):
@@ -186,9 +187,6 @@ def main(argv):
         while True:
             # Обработка блоков аудио из очереди
             process_audio(audio_queue, model, is_recording_var)
-
-
-           
 
 
 if __name__ == '__main__':
