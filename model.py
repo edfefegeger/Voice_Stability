@@ -20,7 +20,6 @@ model_file = file1.readline()
 language_file = file1.readline()
 input_device_file = file1.readline()
 confidence_file = file1.readline()
-processing_interval_file = file1.readline()
 timeout_file = file1.readline()
 sample_rate_file = file1.readline()
 num_channels_file = file1.readline()
@@ -38,7 +37,6 @@ flags.DEFINE_string('input_device', input_device_file.strip(), 'The input device
 confidence_value = confidence_file.split('=')[-1].strip()
 flags.DEFINE_float('confidence', confidence_file.strip(), 'Минимальная уверенность для использования.')
 
-flags.DEFINE_integer('processing_interval', processing_interval_file.strip(), 'Интервал обработки аудио в секундах.')
 
 flags.DEFINE_integer('timeout', timeout_file.strip(), 'Таймаут работы приложения в секундах.')
 
@@ -106,11 +104,17 @@ def timed(func):
 @timed
 def transcribe(model, audio, volume_level):
     # Run the Whisper model to transcribe the audio chunk.
-    result = whisper.transcribe(model=model, audio=audio, language=FLAGS.language)
+    result = whisper.transcribe(
+        model=model,
+        audio=audio,
+        language=FLAGS.language,
+        temperature=FLAGS.confidence  # добавьте параметр confidence
+    )
 
     # Use the transcribed text.
     text = result['text'].strip()
     logging.info(text)
+
 
 
 
@@ -123,10 +127,14 @@ def stream_callback(indata, frames, time, status, audio_queue):
     if not np.any(indata):
         return
 
-    # Add this chunk of audio to the queue.
-    volume_level = np.max(np.abs(indata))
-    audio = indata[:, FLAGS.channel_index].copy()
-    audio_queue.put((audio, volume_level))  # передача volume_level вместе с аудио
+    # Check if recording is active
+    with is_recording_lock:
+        if is_recording_var.value:
+            # Add this chunk of audio to the queue.
+            volume_level = np.max(np.abs(indata))
+            audio = indata[:, FLAGS.channel_index].copy()
+            audio_queue.put((audio, volume_level))  # передача volume_level вместе с аудио
+
 
 
 def process_audio(audio_queue, model, is_recording_var):
@@ -173,9 +181,13 @@ def main(argv):
         check_microphone_thread = threading.Thread(target=check_microphone_level, args=(audio_queue, is_recording_var), daemon=True)
         check_microphone_thread.start()
 
+        start_time = now()  # Запоминаем время начала работы приложения
+
         while True:
             # Обработка блоков аудио из очереди
             process_audio(audio_queue, model, is_recording_var)
+
+
            
 
 
