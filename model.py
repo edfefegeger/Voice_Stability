@@ -35,8 +35,7 @@ flags.DEFINE_string('language', language_file.strip(),
 flags.DEFINE_string('input_device', input_device_file.strip(), 'The input device used to record audio.')
 
 confidence_value = confidence_file.split('=')[-1].strip()
-flags.DEFINE_float('confidence', confidence_file.strip(), 'Минимальная уверенность для использования.')
-
+flags.DEFINE_float('confidence', confidence_file.strip(), 'Минимальная temperature для использования.')
 
 flags.DEFINE_integer('timeout', timeout_file.strip(), 'Таймаут работы всего приложения в секундах.')
 
@@ -104,7 +103,7 @@ def timed(func):
 
 @timed
 def transcribe(model, audio, volume_level):
-    # Run the Whisper model to transcribe the audio chunk.
+    # Запуск модели и перевод текста
     result = whisper.transcribe(
         model=model,
         audio=audio,
@@ -124,14 +123,14 @@ def stream_callback(indata, frames, time, status, audio_queue):
     if status:
         logging.warning(f'Stream callback status: {status}')
 
-    # Check if indata is not empty
+    # Проверка что дата не пустая
     if not np.any(indata):
         return
 
-    # Check if recording is active
+    # Проверка что запись актиывна
     with is_recording_lock:
         if is_recording_var.value:
-            # Add this chunk of audio to the queue.
+            # Добавление записанного chunk в очередь, предварительно проверив на None
             volume_level = np.max(np.abs(indata))
             audio = indata[:, FLAGS.channel_index].copy()
             audio_queue.put((audio, volume_level))  # передача volume_level вместе с аудио
