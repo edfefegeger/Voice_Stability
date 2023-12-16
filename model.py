@@ -38,7 +38,7 @@ confidence_value = confidence_file.split('=')[-1].strip()
 flags.DEFINE_float('confidence', confidence_file.strip(), 'Минимальная уверенность для использования.')
 
 
-flags.DEFINE_integer('timeout', timeout_file.strip(), 'Таймаут работы приложения в секундах.')
+flags.DEFINE_integer('timeout', timeout_file.strip(), 'Таймаут работы всего приложения в секундах.')
 
 flags.DEFINE_integer('sample_rate', sample_rate_file.strip(),
                      'The sample rate of the recorded audio.')
@@ -157,6 +157,8 @@ def process_audio(audio_queue, model, is_recording_var):
 
 
 def main(argv):
+    global is_recording_var
+    global total_runtime
     # Загрузка модели Whisper
     logging.info(f'Loading model "{FLAGS.model_name}"...')
     model = whisper.load_model(name=FLAGS.model_name)
@@ -164,8 +166,7 @@ def main(argv):
     # Предварительный прогон модели (warm-up)
     logging.info('Warming model up...')
     block_size = FLAGS.chunk_seconds * FLAGS.sample_rate
-    whisper.transcribe(model=model,
-                       audio=np.zeros(block_size, dtype=np.float32))
+    whisper.transcribe(model=model, audio=np.zeros(block_size, dtype=np.float32))
 
     # Начало потока аудио и обработка
     logging.info('Starting stream...')
@@ -184,10 +185,19 @@ def main(argv):
 
         start_time = now()  # Запоминаем время начала работы приложения
 
+        # Создание lock для защиты total_runtime
+        total_runtime_lock = threading.Lock()
+
         while True:
             # Обработка блоков аудио из очереди
             process_audio(audio_queue, model, is_recording_var)
 
+            # Проверка тайм-аута работы всего приложения
+            with total_runtime_lock:
+                total_runtime = now() - start_time
+                if total_runtime >= FLAGS.timeout:
+                    logging.info("Достигнут тайм-аут. Завершение приложения.")
+                    exit()
 
 if __name__ == '__main__':
     app.run(main)
